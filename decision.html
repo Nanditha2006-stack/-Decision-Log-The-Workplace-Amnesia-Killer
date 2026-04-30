@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Decision Log — Team Memory OS</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=Geist:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0e0e0f;
+    --bg2: #161618;
+    --bg3: #1d1d20;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #f0ede8;
+    --text2: #8a8680;
+    --text3: #555250;
+    --accent: #d4a853;
+    --accent2: #a87d30;
+    --green: #4ade80;
+    --red: #f87171;
+    --blue: #60a5fa;
+    --purple: #a78bfa;
+    --sans: 'Geist', sans-serif;
+    --serif: 'Instrument Serif', serif;
+    --mono: 'DM Mono', monospace;
+  }
+
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); }
+
+  .layout { display: grid; grid-template-columns: 240px 1fr; height: 100vh; overflow: hidden; }
+
+  /* SIDEBAR */
+  .sidebar { background: var(--bg2); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+  .sidebar-logo { padding: 20px 20px 0; display: flex; align-items: center; gap: 10px; }
+  .logo-mark { width: 28px; height: 28px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .logo-mark svg { width: 14px; height: 14px; }
+  .logo-text { font-family: var(--serif); font-size: 16px; color: var(--text); }
+  .logo-sub { font-size: 10px; font-family: var(--mono); color: var(--text3); letter-spacing: 0.1em; padding: 0 20px; margin-top: 4px; margin-bottom: 20px; }
+
+  .sidebar-section { padding: 0 12px; margin-bottom: 6px; }
+  .sidebar-label { font-size: 10px; font-family: var(--mono); color: var(--text3); letter-spacing: 0.1em; padding: 10px 8px 6px; }
+  .nav-item { display: flex; align-items: center; gap: 9px; padding: 7px 8px; border-radius: 6px; cursor: pointer; font-size: 13px; color: var(--text2); transition: all 0.12s; border: 1px solid transparent; }
+  .nav-item:hover { color: var(--text); background: var(--bg3); }
+  .nav-item.active { color: var(--text); background: var(--bg3); border-color: var(--border); }
+  .nav-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .nav-count { margin-left: auto; font-size: 11px; font-family: var(--mono); color: var(--text3); }
+
+  .sidebar-footer { margin-top: auto; padding: 16px; border-top: 1px solid var(--border); }
+  .stat-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .stat-label { font-size: 11px; color: var(--text3); }
+  .stat-val { font-size: 11px; font-family: var(--mono); color: var(--accent); }
+
+  /* MAIN */
+  .main { display: flex; flex-direction: column; overflow: hidden; }
+
+  .topbar { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .topbar-title { font-family: var(--serif); font-size: 18px; color: var(--text); }
+  .topbar-actions { margin-left: auto; display: flex; gap: 8px; }
+
+  .search-wrap { flex: 1; max-width: 340px; position: relative; }
+  .search-wrap input { width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: 7px; padding: 7px 12px 7px 32px; font-size: 13px; color: var(--text); font-family: var(--sans); outline: none; transition: border 0.15s; }
+  .search-wrap input:focus { border-color: var(--border2); }
+  .search-wrap input::placeholder { color: var(--text3); }
+  .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text3); width: 14px; }
+
+  .btn { padding: 7px 14px; font-size: 12px; font-weight: 500; border-radius: 7px; cursor: pointer; transition: all 0.12s; font-family: var(--sans); border: 1px solid var(--border); background: var(--bg3); color: var(--text2); }
+  .btn:hover { color: var(--text); border-color: var(--border2); }
+  .btn-accent { background: var(--accent); color: #0e0e0f; border-color: var(--accent); font-weight: 600; }
+  .btn-accent:hover { background: #e6bc6e; border-color: #e6bc6e; color: #0e0e0f; }
+
+  /* AI BAR */
+  .ai-section { padding: 14px 20px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .ai-label-row { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+  .ai-badge { font-size: 10px; font-family: var(--mono); color: var(--accent); border: 1px solid rgba(212,168,83,0.3); padding: 2px 7px; border-radius: 20px; letter-spacing: 0.08em; }
+  .ai-label-text { font-size: 12px; color: var(--text3); }
+  .ai-input-row { display: flex; gap: 8px; }
+  .ai-input-row input { flex: 1; background: var(--bg3); border: 1px solid var(--border); border-radius: 7px; padding: 9px 14px; font-size: 13px; color: var(--text); font-family: var(--sans); outline: none; transition: border 0.15s; }
+  .ai-input-row input:focus { border-color: rgba(212,168,83,0.4); }
+  .ai-input-row input::placeholder { color: var(--text3); }
+
+  .ai-result { margin: 0 20px 14px; padding: 14px 16px; background: rgba(212,168,83,0.05); border: 1px solid rgba(212,168,83,0.15); border-radius: 8px; display: none; }
+  .ai-result.show { display: block; }
+  .ai-result-header { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
+  .ai-result-title { font-size: 11px; font-family: var(--mono); color: var(--accent); letter-spacing: 0.06em; }
+  .ai-result-body { font-size: 13px; color: var(--text2); line-height: 1.7; }
+  .ai-source-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .source-chip { font-size: 11px; font-family: var(--mono); color: var(--text3); border: 1px solid var(--border); padding: 3px 8px; border-radius: 4px; cursor: pointer; transition: all 0.12s; }
+  .source-chip:hover { color: var(--text); border-color: var(--border2); }
+  .thinking-dots::after { content: '...'; animation: dots 1.2s infinite; }
+  @keyframes dots { 0%,100%{content:'.'} 33%{content:'..'} 66%{content:'...'} }
+
+  /* TABS */
+  .tabs { display: flex; gap: 0; padding: 0 20px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .tab { padding: 10px 14px; font-size: 12px; color: var(--text3); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.12s; font-family: var(--mono); letter-spacing: 0.04em; }
+  .tab:hover { color: var(--text2); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* CARDS */
+  .list-area { flex: 1; overflow-y: auto; padding: 16px 20px; }
+  .list-area::-webkit-scrollbar { width: 4px; }
+  .list-area::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  .decision-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 10px; cursor: pointer; transition: all 0.15s; position: relative; overflow: hidden; }
+  .decision-card:hover { border-color: var(--border2); background: var(--bg3); }
+  .decision-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; border-radius: 10px 0 0 10px; }
+  .decision-card.cat-tech::before { background: var(--blue); }
+  .decision-card.cat-product::before { background: var(--green); }
+  .decision-card.cat-hiring::before { background: var(--accent); }
+  .decision-card.cat-infra::before { background: var(--purple); }
+  .decision-card.cat-design::before { background: #f472b6; }
+  .decision-card.cat-strategy::before { background: var(--red); }
+
+  .card-row1 { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .cat-tag { font-size: 10px; font-family: var(--mono); padding: 2px 7px; border-radius: 4px; letter-spacing: 0.06em; }
+  .cat-tech { background: rgba(96,165,250,0.1); color: var(--blue); border: 1px solid rgba(96,165,250,0.2); }
+  .cat-product { background: rgba(74,222,128,0.1); color: var(--green); border: 1px solid rgba(74,222,128,0.2); }
+  .cat-hiring { background: rgba(212,168,83,0.1); color: var(--accent); border: 1px solid rgba(212,168,83,0.2); }
+  .cat-infra { background: rgba(167,139,250,0.1); color: var(--purple); border: 1px solid rgba(167,139,250,0.2); }
+  .cat-design { background: rgba(244,114,182,0.1); color: #f472b6; border: 1px solid rgba(244,114,182,0.2); }
+  .cat-strategy { background: rgba(248,113,113,0.1); color: var(--red); border: 1px solid rgba(248,113,113,0.2); }
+  .impact-badge { font-size: 10px; font-family: var(--mono); padding: 2px 7px; border-radius: 4px; }
+  .impact-high { background: rgba(248,113,113,0.1); color: var(--red); border: 1px solid rgba(248,113,113,0.2); }
+  .impact-medium { background: rgba(212,168,83,0.08); color: var(--accent2); border: 1px solid rgba(212,168,83,0.15); }
+  .impact-low { background: rgba(255,255,255,0.04); color: var(--text3); border: 1px solid var(--border); }
+  .card-date { margin-left: auto; font-size: 11px; font-family: var(--mono); color: var(--text3); }
+
+  .card-title { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 5px; line-height: 1.4; }
+  .card-summary { font-size: 12px; color: var(--text2); line-height: 1.5; }
+  .card-footer { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); }
+  .avatar { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 600; flex-shrink: 0; }
+  .card-decider { font-size: 11px; color: var(--text3); }
+  .card-alts { margin-left: auto; font-size: 11px; color: var(--text3); font-family: var(--mono); }
+
+  /* DETAIL PANEL */
+  .detail-panel { display: none; flex: 1; overflow-y: auto; padding: 24px; }
+  .detail-panel.show { display: block; }
+  .detail-panel::-webkit-scrollbar { width: 4px; }
+  .detail-panel::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  .back-btn { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text3); cursor: pointer; margin-bottom: 20px; transition: color 0.12s; font-family: var(--mono); }
+  .back-btn:hover { color: var(--text2); }
+
+  .detail-header { margin-bottom: 20px; }
+  .detail-cats { display: flex; gap: 6px; align-items: center; margin-bottom: 10px; }
+  .detail-title { font-family: var(--serif); font-size: 26px; color: var(--text); line-height: 1.3; margin-bottom: 10px; }
+  .detail-meta { display: flex; align-items: center; gap: 12px; font-size: 12px; color: var(--text3); }
+
+  .detail-section { margin-bottom: 24px; }
+  .detail-section-label { font-size: 10px; font-family: var(--mono); color: var(--text3); letter-spacing: 0.1em; margin-bottom: 10px; text-transform: uppercase; }
+  .detail-context { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 16px; font-size: 13px; color: var(--text2); line-height: 1.75; }
+
+  .alt-grid { display: flex; flex-direction: column; gap: 6px; }
+  .alt-row { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: 7px; border: 1px solid var(--border); background: var(--bg3); }
+  .alt-row.chosen { border-color: rgba(74,222,128,0.25); background: rgba(74,222,128,0.04); }
+  .alt-row.rejected { opacity: 0.55; }
+  .alt-icon { width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0; margin-top: 1px; }
+  .icon-chosen { background: rgba(74,222,128,0.15); color: var(--green); }
+  .icon-rejected { background: var(--bg2); color: var(--text3); }
+  .alt-text { font-size: 13px; }
+  .alt-name { color: var(--text); font-weight: 500; }
+  .alt-reason { color: var(--text3); font-size: 12px; margin-top: 2px; }
+  .chosen-label { font-size: 10px; font-family: var(--mono); color: var(--green); margin-left: auto; }
+
+  .ask-about-btn { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 8px 14px; background: rgba(212,168,83,0.08); border: 1px solid rgba(212,168,83,0.2); border-radius: 7px; color: var(--accent); cursor: pointer; font-family: var(--mono); transition: all 0.12s; }
+  .ask-about-btn:hover { background: rgba(212,168,83,0.14); }
+
+  /* MODAL */
+  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(4px); }
+  .modal-bg.open { display: flex; }
+  .modal { background: var(--bg2); border: 1px solid var(--border2); border-radius: 12px; padding: 28px; width: 520px; max-height: 90vh; overflow-y: auto; }
+  .modal-title { font-family: var(--serif); font-size: 22px; color: var(--text); margin-bottom: 20px; }
+
+  .form-group { margin-bottom: 16px; }
+  .form-label { display: block; font-size: 11px; font-family: var(--mono); color: var(--text3); letter-spacing: 0.08em; margin-bottom: 6px; }
+  .form-group input, .form-group textarea, .form-group select { width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: 7px; padding: 9px 12px; font-size: 13px; color: var(--text); font-family: var(--sans); outline: none; transition: border 0.15s; }
+  .form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color: var(--border2); }
+  .form-group textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
+  .form-group select { appearance: none; cursor: pointer; }
+  .form-group input::placeholder, .form-group textarea::placeholder { color: var(--text3); }
+
+  .form-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); }
+
+  /* EMPTY */
+  .empty { text-align: center; padding: 60px 20px; }
+  .empty-icon { font-size: 32px; margin-bottom: 12px; opacity: 0.4; }
+  .empty-text { font-size: 14px; color: var(--text3); }
+  .empty-sub { font-size: 12px; color: var(--text3); margin-top: 6px; opacity: 0.7; }
+
+  /* TOAST */
+  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--bg3); border: 1px solid var(--border2); border-radius: 8px; padding: 12px 16px; font-size: 13px; color: var(--text); display: flex; align-items: center; gap: 8px; transform: translateY(80px); opacity: 0; transition: all 0.3s; z-index: 200; }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid rgba(212,168,83,0.2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .ai-result-actions { display: flex; gap: 8px; margin-top: 12px; }
+  .ai-close { margin-left: auto; font-size: 11px; color: var(--text3); cursor: pointer; font-family: var(--mono); }
+  .ai-close:hover { color: var(--text2); }
+</style>
+</head>
+<body>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">
+        <svg viewBox="0 0 14 14" fill="none">
+          <rect x="1" y="1" width="5" height="5" rx="1" fill="#0e0e0f"/>
+          <rect x="8" y="1" width="5" height="5" rx="1" fill="#0e0e0f"/>
+          <rect x="1" y="8" width="5" height="5" rx="1" fill="#0e0e0f"/>
+          <rect x="8" y="8" width="5" height="5" rx="1" fill="rgba(14,14,15,0.4)"/>
+        </svg>
+      </div>
+      <span class="logo-text">Decision Log</span>
+    </div>
+    <div class="logo-sub">TEAM MEMORY OS</div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Filter</div>
+      <div class="nav-item active" onclick="setFilter(null, this)">
+        <div class="nav-dot" style="background:var(--text3)"></div>
+        All decisions
+        <span class="nav-count" id="count-all">—</span>
+      </div>
+      <div class="nav-item" onclick="setFilter('Tech', this)">
+        <div class="nav-dot" style="background:var(--blue)"></div>
+        Tech stack
+        <span class="nav-count" id="count-tech">—</span>
+      </div>
+      <div class="nav-item" onclick="setFilter('Product', this)">
+        <div class="nav-dot" style="background:var(--green)"></div>
+        Product
+        <span class="nav-count" id="count-product">—</span>
+      </div>
+      <div class="nav-item" onclick="setFilter('Hiring', this)">
+        <div class="nav-dot" style="background:var(--accent)"></div>
+        Hiring
+        <span class="nav-count" id="count-hiring">—</span>
+      </div>
+      <div class="nav-item" onclick="setFilter('Infra', this)">
+        <div class="nav-dot" style="background:var(--purple)"></div>
+        Infra
+        <span class="nav-count" id="count-infra">—</span>
+      </div>
+      <div class="nav-item" onclick="setFilter('Strategy', this)">
+        <div class="nav-dot" style="background:var(--red)"></div>
+        Strategy
+        <span class="nav-count" id="count-strategy">—</span>
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="stat-row"><span class="stat-label">Total decisions</span><span class="stat-val" id="stat-total">0</span></div>
+      <div class="stat-row"><span class="stat-label">This month</span><span class="stat-val" id="stat-month">0</span></div>
+      <div class="stat-row"><span class="stat-label">High impact</span><span class="stat-val" id="stat-high">0</span></div>
+      <div class="stat-row" style="margin-top:10px"><span class="stat-label" style="color:var(--accent); font-size:10px">AI search ready ✦</span></div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="topbar">
+      <span class="topbar-title">Decisions</span>
+      <div class="search-wrap">
+        <svg class="search-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="6.5" cy="6.5" r="4.5"/><path d="M10.5 10.5L14 14"/>
+        </svg>
+        <input type="text" placeholder="Search decisions, context, people..." id="searchInput" oninput="applyFilters()">
+      </div>
+      <div class="topbar-actions">
+        <button class="btn" onclick="exportJSON()">Export JSON</button>
+        <button class="btn btn-accent" onclick="openModal()">+ Log decision</button>
+      </div>
+    </div>
+
+    <!-- AI SEARCH -->
+    <div class="ai-section">
+      <div class="ai-label-row">
+        <span class="ai-badge">✦ AI SEARCH</span>
+        <span class="ai-label-text">Ask anything about your team's past decisions</span>
+      </div>
+      <div class="ai-input-row">
+        <input type="text" id="aiQuery" placeholder="Why did we choose PostgreSQL over MongoDB? What alternatives did we weigh for auth?" onkeydown="if(event.key==='Enter') askAI()">
+        <button class="btn btn-accent" onclick="askAI()" id="aiBtn">Ask AI</button>
+      </div>
+    </div>
+
+    <div class="ai-result" id="aiResult">
+      <div class="ai-result-header">
+        <span id="aiSpinner" class="spinner" style="display:none"></span>
+        <span class="ai-result-title" id="aiResultTitle">AI ANSWER</span>
+        <span class="ai-close" onclick="closeAI()">✕ close</span>
+      </div>
+      <div class="ai-result-body" id="aiResultBody"></div>
+      <div class="ai-source-chips" id="aiSources"></div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('all',this)">All</div>
+      <div class="tab" onclick="switchTab('recent',this)">Recent</div>
+      <div class="tab" onclick="switchTab('high',this)">High impact</div>
+    </div>
+
+    <!-- LIST -->
+    <div class="list-area" id="listArea">
+      <div id="cardContainer"></div>
+    </div>
+
+    <!-- DETAIL -->
+    <div class="detail-panel" id="detailPanel">
+      <div id="detailContent"></div>
+    </div>
+  </main>
+</div>
+
+<!-- MODAL -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <div class="modal-title">Log a decision</div>
+    <div class="form-row2">
+      <div class="form-group">
+        <label class="form-label">Decision title *</label>
+        <input type="text" id="fTitle" placeholder="e.g. Adopt Postgres over MySQL">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Category *</label>
+        <select id="fCat">
+          <option value="Tech">Tech</option>
+          <option value="Product">Product</option>
+          <option value="Hiring">Hiring</option>
+          <option value="Infra">Infra</option>
+          <option value="Strategy">Strategy</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Context & reasoning *</label>
+      <textarea id="fContext" rows="4" placeholder="What problem were you solving? What data, pressure, or insight drove this decision?"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">What did you decide?</label>
+      <input type="text" id="fChosen" placeholder="e.g. Use Postgres with pgvector extension">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Alternatives considered (comma-separated)</label>
+      <input type="text" id="fAlts" placeholder="e.g. MySQL, MongoDB, DynamoDB">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Why rejected? (comma-separated, matching order above)</label>
+      <input type="text" id="fRejReasons" placeholder="e.g. No vector support, schema flexibility mismatch, cost at scale">
+    </div>
+    <div class="form-row2">
+      <div class="form-group">
+        <label class="form-label">Decided by</label>
+        <input type="text" id="fDecider" placeholder="e.g. Arjun + Meera, CTO, Full team">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Impact level</label>
+        <select id="fImpact">
+          <option value="high">High — affects architecture/strategy</option>
+          <option value="medium" selected>Medium — affects workflows</option>
+          <option value="low">Low — tactical change</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-accent" onclick="saveDecision()">Save decision</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <div class="toast-dot"></div>
+  <span id="toastMsg">Decision saved.</span>
+</div>
+
+<script>
+// ─── SEED DATA ───────────────────────────────────────────────────────────────
+const SEED = [
+  {
+    id:'d1', title:'Adopt GraphQL over REST for all new APIs', category:'Tech', date:'Apr 12, 2026',
+    decider:'Arjun S.', impact:'high',
+    context:'Our mobile clients were over-fetching data constantly — some screens needed 6 separate REST calls to render. Engineers spent weeks writing custom aggregation endpoints just to cut payload sizes. At our traffic levels, over-fetching was a real bandwidth cost. After a 3-week spike with Apollo GraphQL, every team agreed the DX was dramatically better.',
+    chosen:'GraphQL (Apollo Server)',
+    alternatives:[
+      {name:'REST with custom endpoints', reason:'Required manual maintenance of bespoke endpoints; didn\'t solve the root problem'},
+      {name:'gRPC', reason:'Too much complexity for browser/mobile clients; protobuf toolchain overhead'},
+      {name:'tRPC', reason:'Required full TypeScript monorepo migration we weren\'t ready for'},
+    ]
+  },
+  {
+    id:'d2', title:'Sunset the "Smart Folders" feature in v4.1', category:'Product', date:'Mar 28, 2026',
+    decider:'Meera K. (PM)', impact:'high',
+    context:'Only 18% of users had ever created a Smart Folder. Support tickets about sync confusion were consuming 12% of eng bandwidth monthly. Three user research sessions revealed that most users didn\'t understand what Smart Folders did — even power users who used them said they felt unreliable. We ran a 30-day warning campaign before removal.',
+    chosen:'Full removal in v4.1',
+    alternatives:[
+      {name:'Redesign the UX', reason:'Would take 2 sprints with no guarantee of adoption improvement given root confusion'},
+      {name:'Add onboarding tooltip', reason:'Tried this in v3.8 — tooltip completion rate was 7%'},
+      {name:'Keep but deprioritize', reason:'Would still consume support bandwidth with no path to improvement'},
+    ]
+  },
+  {
+    id:'d3', title:'Hire fractional CFO instead of full-time for Series A prep', category:'Hiring', date:'Mar 15, 2026',
+    decider:'Founders (unanimous)', impact:'medium',
+    context:'We need financial rigor, board-ready reporting, and cap table management for Series A. A full-time CFO costs $180–240k+ at our stage and would extend runway by only 8 months after hire. Naveen (our fractional pick) has closed 11 Series A/B rounds and works with 4 companies simultaneously, meaning deep pattern-matching on what investors want.',
+    chosen:'Fractional CFO at $4,500/month (Naveen R.)',
+    alternatives:[
+      {name:'Full-time CFO hire', reason:'Runway cost too high pre-Series A; would need to raise sooner at worse terms'},
+      {name:'Promote finance manager internally', reason:'No one internal has Series A fundraising experience'},
+      {name:'Big 4 firm advisory', reason:'Too slow, too expensive for ongoing ops work, no fundraise specialization'},
+    ]
+  },
+  {
+    id:'d4', title:'Migrate staging environment from EC2 to Fly.io', category:'Infra', date:'Feb 22, 2026',
+    decider:'Deepak L. (Infra lead)', impact:'low',
+    context:'EC2 t3.mediums sat idle 70% of the time but we paid $380/mo. Fly.io\'s scale-to-zero reduced our staging bill to ~$55/mo estimated. Cold start latency tests showed <75ms which is acceptable for developer workflows (not user-facing). Migration took 4 hours including DNS cutover.',
+    chosen:'Fly.io with scale-to-zero machines',
+    alternatives:[
+      {name:'AWS Fargate', reason:'Comparable cost savings but significantly more operational complexity'},
+      {name:'Railway', reason:'Nice DX but couldn\'t match Fly.io on multi-region support we\'ll need later'},
+      {name:'EC2 + scheduling scripts', reason:'Partial savings only; maintained operational complexity'},
+    ]
+  },
+  {
+    id:'d5', title:'Mandate TypeScript strict mode for all new services', category:'Tech', date:'Feb 8, 2026',
+    decider:'Eng team vote (6–1)', impact:'high',
+    context:'Three production incidents in Q4 2025 were directly traced to runtime type errors in JavaScript services: a null reference crash in the payments service (P0, 40 min downtime), a silent data truncation bug, and an incorrect API response type that affected 12% of users for 6 hours. The one dissenter preferred a Zod-only approach. Team agreed compile-time safety was non-negotiable after the payments incident.',
+    chosen:'TypeScript strict mode for all new services; migration plan for existing ones',
+    alternatives:[
+      {name:'Zod-only runtime validation', reason:'Catches errors too late — at runtime, not compile time'},
+      {name:'JSDoc type annotations', reason:'Poor tooling support, easy to skip, no enforcement'},
+      {name:'Keep JS + stricter ESLint', reason:'Already tried this — linting missed the Q4 incidents'},
+    ]
+  },
+  {
+    id:'d6', title:'Switch transactional email from SendGrid to Resend', category:'Tech', date:'Jan 30, 2026',
+    decider:'Arjun S.', impact:'low',
+    context:'SendGrid raised prices 40% at annual renewal — from $89/mo to $125/mo for our tier. Resend\'s API is dramatically cleaner, deliverability scores are comparable on our test sends, and their React Email integration lets our frontend engineers own email templates for the first time. Total migration time: 1 sprint.',
+    chosen:'Resend + React Email',
+    alternatives:[
+      {name:'Postmark', reason:'Good deliverability but no React integration; pricing similar to new SendGrid'},
+      {name:'AWS SES', reason:'Cheapest option but high ops overhead and worse deliverability for cold sends'},
+      {name:'Stay on SendGrid', reason:'40% price increase with no added value wasn\'t justifiable'},
+    ]
+  },
+];
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let DECISIONS = [];
+let currentFilter = null;
+let currentTab = 'all';
+let viewingDetail = false;
+
+// ─── STORAGE ─────────────────────────────────────────────────────────────────
+async function loadDecisions() {
+  try {
+    const result = await window.storage.get('decisions');
+    if (result && result.value) {
+      DECISIONS = JSON.parse(result.value);
+    } else {
+      DECISIONS = SEED.map(d => ({...d}));
+      await persistDecisions();
+    }
+  } catch(e) {
+    DECISIONS = SEED.map(d => ({...d}));
+  }
+  renderAll();
+  updateStats();
+}
+
+async function persistDecisions() {
+  try {
+    await window.storage.set('decisions', JSON.stringify(DECISIONS));
+  } catch(e) {}
+}
+
+// ─── RENDER ──────────────────────────────────────────────────────────────────
+function catClass(cat) {
+  return 'cat-' + (cat||'tech').toLowerCase();
+}
+
+function initials(name) {
+  return (name||'?').split(/[\s,+]+/).filter(Boolean).map(w=>w[0]).join('').toUpperCase().slice(0,2);
+}
+
+function avatarColor(name) {
+  const colors = ['#60a5fa','#4ade80','#d4a853','#a78bfa','#f472b6','#f87171','#34d399'];
+  let h = 0; for(let c of name||'') h = (h<<5)-h+c.charCodeAt(0);
+  return colors[Math.abs(h)%colors.length];
+}
+
+function renderCards(decisions) {
+  const c = document.getElementById('cardContainer');
+  if (!decisions.length) {
+    c.innerHTML = `<div class="empty"><div class="empty-icon">◻</div><div class="empty-text">No decisions found</div><div class="empty-sub">Log your first decision to get started</div></div>`;
+    return;
+  }
+  c.innerHTML = decisions.map(d => {
+    const cc = catClass(d.category);
+    const col = avatarColor(d.decider);
+    const ini = initials(d.decider);
+    const altCount = (d.alternatives||[]).length;
+    return `<div class="decision-card ${cc}" onclick="openDetail('${d.id}')">
+      <div class="card-row1">
+        <span class="cat-tag ${cc}">${d.category}</span>
+        <span class="impact-badge impact-${d.impact||'medium'}">${d.impact||'medium'}</span>
+        <span class="card-date">${d.date}</span>
+      </div>
+      <div class="card-title">${d.title}</div>
+      <div class="card-summary">${d.context.slice(0,130)}${d.context.length>130?'…':''}</div>
+      <div class="card-footer">
+        <div class="avatar" style="background:${col}22;color:${col}">${ini}</div>
+        <span class="card-decider">${d.decider||'Unknown'}</span>
+        <span class="card-alts">${altCount} alt${altCount!==1?'s':''} considered</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function applyFilters() {
+  const q = (document.getElementById('searchInput').value||'').toLowerCase().trim();
+  let results = [...DECISIONS];
+  if (currentFilter) results = results.filter(d => d.category === currentFilter);
+  if (currentTab === 'recent') results = results.slice(0, 5);
+  if (currentTab === 'high') results = results.filter(d => d.impact === 'high');
+  if (q) results = results.filter(d =>
+    (d.title||'').toLowerCase().includes(q) ||
+    (d.context||'').toLowerCase().includes(q) ||
+    (d.decider||'').toLowerCase().includes(q) ||
+    (d.chosen||'').toLowerCase().includes(q) ||
+    (d.alternatives||[]).some(a => (a.name||'').toLowerCase().includes(q))
+  );
+  renderCards(results);
+}
+
+function renderAll() {
+  applyFilters();
+  updateCounts();
+}
+
+function updateCounts() {
+  document.getElementById('count-all').textContent = DECISIONS.length;
+  ['tech','product','hiring','infra','strategy'].forEach(cat => {
+    const el = document.getElementById('count-' + cat);
+    if (el) el.textContent = DECISIONS.filter(d => d.category.toLowerCase() === cat).length;
+  });
+}
+
+function updateStats() {
+  document.getElementById('stat-total').textContent = DECISIONS.length;
+  const now = new Date();
+  const thisMonth = DECISIONS.filter(d => {
+    try { return new Date(d.date).getMonth() === now.getMonth() && new Date(d.date).getFullYear() === now.getFullYear(); } catch(e) { return false; }
+  }).length;
+  document.getElementById('stat-month').textContent = thisMonth;
+  document.getElementById('stat-high').textContent = DECISIONS.filter(d => d.impact === 'high').length;
+}
+
+// ─── NAVIGATION ──────────────────────────────────────────────────────────────
+function setFilter(filter, el) {
+  currentFilter = filter;
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  el.classList.add('active');
+  showList();
+  applyFilters();
+}
+
+function switchTab(tab, el) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  applyFilters();
+}
+
+function showList() {
+  document.getElementById('listArea').style.display = 'block';
+  document.getElementById('detailPanel').classList.remove('show');
+  viewingDetail = false;
+}
+
+function openDetail(id) {
+  const d = DECISIONS.find(x => x.id === id);
+  if (!d) return;
+  viewingDetail = true;
+  document.getElementById('listArea').style.display = 'none';
+  const panel = document.getElementById('detailPanel');
+  panel.classList.add('show');
+  const col = avatarColor(d.decider);
+  const ini = initials(d.decider);
+  const altsHTML = `
+    <div class="alt-row chosen">
+      <div class="alt-icon icon-chosen">✓</div>
+      <div class="alt-text"><div class="alt-name">${d.chosen||d.title}</div><div class="alt-reason" style="color:var(--green);opacity:0.8">Selected</div></div>
+      <span class="chosen-label">CHOSEN</span>
+    </div>
+    ${(d.alternatives||[]).map(a => `<div class="alt-row rejected">
+      <div class="alt-icon icon-rejected">×</div>
+      <div class="alt-text"><div class="alt-name">${a.name}</div>${a.reason?`<div class="alt-reason">${a.reason}</div>`:''}
+      </div>
+    </div>`).join('')}
+  `;
+  panel.innerHTML = `
+    <div class="back-btn" onclick="showList()">← Back to decisions</div>
+    <div class="detail-header">
+      <div class="detail-cats">
+        <span class="cat-tag ${catClass(d.category)}">${d.category}</span>
+        <span class="impact-badge impact-${d.impact||'medium'}">${d.impact||'medium'} impact</span>
+      </div>
+      <div class="detail-title">${d.title}</div>
+      <div class="detail-meta">
+        <div class="avatar" style="background:${col}22;color:${col};width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600">${ini}</div>
+        Decided by <strong>${d.decider||'Unknown'}</strong>
+        <span style="color:var(--border2)">·</span>
+        ${d.date}
+      </div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-label">Context & reasoning</div>
+      <div class="detail-context">${d.context}</div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-label">Alternatives considered</div>
+      <div class="alt-grid">${altsHTML}</div>
+    </div>
+    <div class="detail-section">
+      <div class="ask-about-btn" onclick="askAbout('${d.id}')">✦ Ask AI about this decision</div>
+    </div>
+  `;
+}
+
+function askAbout(id) {
+  const d = DECISIONS.find(x => x.id === id);
+  if (!d) return;
+  document.getElementById('aiQuery').value = `Why did we decide to ${d.title.toLowerCase()}?`;
+  showList();
+  askAI();
+  document.querySelector('.ai-section').scrollIntoView({behavior:'smooth'});
+}
+
+// ─── AI SEARCH ───────────────────────────────────────────────────────────────
+async function askAI() {
+  const q = document.getElementById('aiQuery').value.trim();
+  if (!q) return;
+
+  const result = document.getElementById('aiResult');
+  const body = document.getElementById('aiResultBody');
+  const sources = document.getElementById('aiSources');
+  const spinner = document.getElementById('aiSpinner');
+  const title = document.getElementById('aiResultTitle');
+
+  result.classList.add('show');
+  spinner.style.display = 'inline-block';
+  title.textContent = 'SEARCHING…';
+  body.textContent = '';
+  sources.innerHTML = '';
+  document.getElementById('aiBtn').disabled = true;
+
+  const decisionsContext = DECISIONS.map(d => `
+DECISION ID: ${d.id}
+Title: ${d.title}
+Category: ${d.category}
+Date: ${d.date}
+Decided by: ${d.decider}
+Impact: ${d.impact}
+Context & Reasoning: ${d.context}
+What was chosen: ${d.chosen||d.title}
+Alternatives considered: ${(d.alternatives||[]).map(a => `${a.name}${a.reason?' — rejected because: '+a.reason:''}`).join('; ')}
+---`).join('\n');
+
+  const systemPrompt = `You are an intelligent decision history assistant for a team. You have access to the team's complete decision log. When a user asks a question, search through all decisions and provide a clear, specific answer citing the relevant decisions.
+
+Be conversational but precise. If multiple decisions are relevant, mention all of them. If no decisions are relevant, say so honestly. Always reference specific details from the decision log (people, dates, specific reasons). Keep answers to 2-4 sentences — focused and scannable.
+
+Return your answer as JSON with these fields:
+{
+  "answer": "Your conversational answer here",
+  "relevantIds": ["d1", "d2"] // array of decision IDs that are relevant
+}
+
+Return ONLY the JSON object, no markdown fences.
+
+DECISION LOG:
+${decisionsContext}`;
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: q }]
+      })
+    });
+
+    const data = await response.json();
+    const raw = data.content?.find(b => b.type === 'text')?.text || '';
+
+    let parsed;
+    try {
+      parsed = JSON.parse(raw.replace(/```json|```/g,'').trim());
+    } catch(e) {
+      parsed = { answer: raw, relevantIds: [] };
+    }
+
+    spinner.style.display = 'none';
+    title.textContent = 'AI ANSWER ✦';
+    body.textContent = parsed.answer || 'No relevant decisions found.';
+
+    if (parsed.relevantIds?.length) {
+      sources.innerHTML = '<span style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-right:4px">Sources:</span>' +
+        parsed.relevantIds.map(id => {
+          const d = DECISIONS.find(x => x.id === id);
+          if (!d) return '';
+          return `<span class="source-chip" onclick="openDetail('${id}')">${d.title.slice(0,40)}${d.title.length>40?'…':''}</span>`;
+        }).filter(Boolean).join('');
+    }
+  } catch(e) {
+    spinner.style.display = 'none';
+    title.textContent = 'ERROR';
+    body.textContent = 'Could not reach AI. Check your connection.';
+  }
+
+  document.getElementById('aiBtn').disabled = false;
+}
+
+function closeAI() {
+  document.getElementById('aiResult').classList.remove('show');
+}
+
+// ─── MODAL ───────────────────────────────────────────────────────────────────
+function openModal() {
+  document.getElementById('modalBg').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('modalBg').classList.remove('open');
+}
+
+async function saveDecision() {
+  const title = document.getElementById('fTitle').value.trim();
+  const context = document.getElementById('fContext').value.trim();
+  if (!title || !context) { showToast('Title and context are required.'); return; }
+
+  const altNames = document.getElementById('fAlts').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const altReasons = document.getElementById('fRejReasons').value.split(',').map(s=>s.trim());
+
+  const d = {
+    id: 'u' + Date.now(),
+    title,
+    category: document.getElementById('fCat').value,
+    date: new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}),
+    decider: document.getElementById('fDecider').value.trim() || 'You',
+    impact: document.getElementById('fImpact').value,
+    context,
+    chosen: document.getElementById('fChosen').value.trim() || title,
+    alternatives: altNames.map((name, i) => ({ name, reason: altReasons[i]||'' }))
+  };
+
+  DECISIONS.unshift(d);
+  await persistDecisions();
+  renderAll();
+  updateStats();
+  closeModal();
+  showToast('Decision logged.');
+
+  ['fTitle','fContext','fChosen','fAlts','fRejReasons','fDecider'].forEach(id => { document.getElementById(id).value = ''; });
+}
+
+// ─── EXPORT ──────────────────────────────────────────────────────────────────
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(DECISIONS, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'decision-log-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  showToast('Exported ' + DECISIONS.length + ' decisions.');
+}
+
+// ─── TOAST ───────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+loadDecisions();
+</script>
+</body>
+</html>
